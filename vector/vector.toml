@@ -1,0 +1,46 @@
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+playground = true
+
+[sources.prometheus]
+type = "prometheus_scrape"
+endpoints = [ "http://prometheus_data_generator:9000/metrics/" ]
+scrape_interval_secs = 15
+instance_tag = "instance"
+endpoint_tag = "endpoint"
+
+[sinks.stdout]
+type = "console"
+inputs = ["prometheus"]
+target = "stdout"
+
+[sinks.stdout.encoding]
+codec = "json"
+
+[transforms.remove_tag]
+type = "lua"
+inputs = [ "prometheus" ]
+version = "2"
+
+[transforms.remove_tag.hooks]
+  process = """
+function (event, emit)
+\t-- Remove tag
+\tevent.metric.tags.tag_to_remove = "remove_me"
+\temit(event)
+end"""
+
+[transforms.reduce_cardinality]
+type = "tag_cardinality_limit"
+inputs = [ "remove_tag" ]
+mode = 'exact'
+
+[transforms.reduce_cardinality.fields]
+value_limit = 2
+limit_exceeded_action = "drop_tag"
+
+[sinks.datadog]
+type = "datadog_metrics"
+inputs = [ "reduce_cardinality" ]
+default_api_key = "${DD_API_KEY}"

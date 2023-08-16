@@ -1,0 +1,22 @@
+version: '3.9'
+services:
+  prometheus_data_generator:
+    image: littleangryclouds/prometheus-data-generator:latest
+    ports:
+      - "127.0.0.1:10020:9000"
+    volumes:
+      - ./prometheus-data-generator/:/prometheus-data-generator/
+    environment:
+      PDG_LOG_LEVEL: INFO
+      PDG_CONFIG: /prometheus-data-generator/config.yml
+  vector:
+    image: timberio/vector:0.30.0-alpine
+    ports:
+      - 8686:8686
+    environment:
+      - DD_API_KEY
+      - LOG=info
+    volumes:
+      - ./vector:/etc/vector:ro
+    depends_on:
+      - prometheus_data_generator
